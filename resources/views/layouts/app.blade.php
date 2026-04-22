@@ -34,6 +34,10 @@
         
         main {
             width: 100%;
+            min-height: 100vh;
+            display: block;
+            position: relative;
+            z-index: 1;
         }
         
         .navbar-custom {
@@ -41,6 +45,8 @@
             border-bottom: 1px solid var(--secondary-dark);
             padding: 1.5rem 0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
         }
         
         .navbar-brand {
@@ -135,35 +141,29 @@
             z-index: 2;
         }
         
-        .hero-section {
-            background-color: var(--primary-dark);
-            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%), url('/images/images%20(3).jfif');
-            background-size: 100% auto;
-            background-position: center top;
-            background-attachment: fixed;
-            background-repeat: repeat-y;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%);
-            z-index: 1;
-        }
-        
         .hero-content {
             width: 100%;
             position: relative;
             z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #ffffff;
+        }
+        
+        .hero-content h1,
+        .hero-content h2,
+        .hero-content p {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: block !important;
+        }
+        
+        .hero-text-wrapper {
+            width: 100%;
         }
         
         .stats-hero-section {
@@ -343,25 +343,6 @@
             }
         }
         
-        .hero-content {
-            width: 100%;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .hero-text-wrapper {
-            text-shadow: 3px 3px 12px rgba(0, 0, 0, 0.6);
-        }
-        
-        .hero-text-wrapper h1,
-        .hero-text-wrapper h2 {
-            text-shadow: 3px 3px 15px rgba(0, 0, 0, 0.7);
-        }
-        
-        .hero-text-wrapper p {
-            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.6);
-        }
-        
         .btn-primary-custom:hover {
             background-color: #ffb81a;
             transform: scale(1.05);
@@ -373,6 +354,29 @@
             background-color: rgba(255, 165, 0, 0.1);
             color: #FFA500;
             border-color: #FFA500;
+        }
+        
+        /* PWA Install Button Styling */
+        #pwa-install-button .btn {
+            background: linear-gradient(135deg, #FFA500 0%, #ffb81a 100%);
+            border: none;
+            color: #000 !important;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        #pwa-install-button .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 165, 0, 0.6);
+            background: linear-gradient(135deg, #ffb81a 0%, #FFA500 100%);
+        }
+        
+        #pwa-install-button .btn i {
+            font-size: 1.1rem;
         }
     </style>
 </head>
@@ -394,10 +398,10 @@
                         <a class="btn btn-primary-custom" href="{{ route('home') }}">Beranda</a>
                     </li>
                     <li class="nav-item d-none" id="pwa-install-button" style="margin-left: 10px;">
-                        <button class="btn btn-outline-warning d-flex align-items-center gap-2" title="Install aplikasi">
-                            <i class="fas fa-download"></i>
-                            <span class="d-none d-md-inline">Install App</span>
-                        </button>
+                    
+                    
+                    
+                    
                     </li>
                 </ul>
             </div>
@@ -421,7 +425,7 @@
         // ========== Service Worker Registration ==========
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('{{ asset("service-worker.js") }}', {
+                navigator.serviceWorker.register('{{ asset("service-worker.js") }}?v=1.2.0', {
                     scope: '/'
                 }).then(registration => {
                     console.log('✓ Service Worker registered successfully');
@@ -459,7 +463,9 @@
             // Tampilkan install button jika ada
             const installBtn = document.getElementById('pwa-install-button');
             if (installBtn) {
-                installBtn.style.display = 'flex';
+                // Remove d-none class (lebih baik dari style.display)
+                installBtn.classList.remove('d-none');
+                console.log('✓ Install button revealed');
             }
         });
         
@@ -470,11 +476,15 @@
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
                     const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`User response: ${outcome}`);
+                    console.log(`✓ User response: ${outcome}`);
                     deferredPrompt = null;
-                    installBtn.style.display = 'none';
+                    installBtn.classList.add('d-none');
+                } else {
+                    alert('Install not available in this browser');
                 }
             });
+        } else {
+            console.warn('⚠ Install button element not found');
         }
         
         // Handle successful installation

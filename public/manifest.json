@@ -1,76 +1,22 @@
-{
-  "name": "Padel House - Aplikasi Booking Lapangan Padel",
-  "short_name": "Padel",
-  "description": "Aplikasi booking lapangan padel online dengan sistem pembayaran Midtrans",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0d6efd",
-  "categories": ["sports", "utilities"],
-  "screenshots": [
-    {
-      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-      "sizes": "192x192",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "icons": [
-    {
-      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAADAoAMABAAAAAEAAADAAAAAA8z/1QAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACAAAAACACAYAAABoZEYsAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAACAAoADABAAAAAEAAACAAAAAAD1QAAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACAAAAACACAYAAABoZEYsAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAACAAoADABAAAAAEAAACAAAAAAD1QAAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Pesan Lapangan",
-      "short_name": "Pesan",
-      "description": "Langsung ke halaman pemesanan lapangan padel",
-      "url": "/?shortcut=booking",
-      "icons": [
-        {
-          "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAADAoAMABAAAAAEAAADAAAAAA8z/1QAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Lacak Booking",
-      "short_name": "Lacak",
-      "description": "Cek status booking yang sudah dibuat",
-      "url": "/track-booking",
-      "icons": [
-        {
-          "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAADAoAMABAAAAAEAAADAAAAAA8z/1QAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false
+﻿{
+    "theme_color":  "#FFA500",
+    "name":  "Padel Booking",
+    "display":  "standalone",
+    "short_name":  "Padel",
+    "background_color":  "#ffffff",
+    "start_url":  "/",
+    "icons":  [
+                  {
+                      "purpose":  "any",
+                      "type":  "image/svg+xml",
+                      "sizes":  "192x192",
+                      "src":  "data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20192%20192%27%3E%3Crect%20fill=%27%23FFA500%27%20width=%27192%27%20height=%27192%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20text-anchor=%27middle%27%20dy=%27.3em%27%20font-size=%27100%27%20fill=%27%23000%27%3E🎾%3C/text%3E%3C/svg%3E"
+                  },
+                  {
+                      "purpose":  "any",
+                      "type":  "image/svg+xml",
+                      "sizes":  "512x512",
+                      "src":  "data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20512%20512%27%3E%3Crect%20fill=%27%23FFA500%27%20width=%27512%27%20height=%27512%27/%3E%3Ctext%20x=%2750%25%27%20y=%2750%25%27%20text-anchor=%27middle%27%20dy=%27.3em%27%20font-size=%27250%27%20fill=%27%23000%27%3E🎾%3C/text%3E%3C/svg%3E"
+                  }
+              ]
 }
