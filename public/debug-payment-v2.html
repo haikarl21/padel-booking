@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Pembayaran - Midtrans Snap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; font-family: 'Segoe UI'; }
+        .container { max-width: 1000px; margin-top: 30px; }
+        .section { background: white; padding: 20px; margin: 15px 0; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .section h3 { color: #FFA500; border-bottom: 2px solid #FFA500; padding-bottom: 10px; }
+        .test-result { padding: 12px; margin: 10px 0; border-radius: 6px; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { margin: 5px; }
+        pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; max-height: 300px; font-size: 12px; }
+        input { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="text-center mb-4">🔧 Debug Midtrans Payment Failure</h1>
+
+    <!-- Section 1: Environment Check -->
+    <div class="section">
+        <h3>1️⃣ Check Environment</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <label><strong>Booking ID:</strong></label>
+                <input type="number" id="bookingId" class="form-control" value="1" min="1">
+            </div>
+            <div class="col-md-6">
+                <label><strong>Payment Type:</strong></label>
+                <select id="paymentType" class="form-control">
+                    <option value="full">Pembayaran Penuh</option>
+                    <option value="partial">Pembayaran 50%</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-primary mt-3" onclick="runEnvironmentCheck()">Run Environment Check</button>
+        <div id="envResults" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Section 2: Network Test -->
+    <div class="section">
+        <h3>2️⃣ Network/API Test</h3>
+        <button class="btn btn-success" onclick="testSnapTokenAPI()">Test Snap Token API</button>
+        <button class="btn btn-warning" onclick="clearResults()">Clear Results</button>
+        <div id="networkResults" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Section 3: Snap Library -->
+    <div class="section">
+        <h3>3️⃣ Check Snap Library</h3>
+        <button class="btn btn-info" onclick="checkSnapLibrary()">Check Snap</button>
+        <div id="snapResults" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Section 4: Detailed Logs -->
+    <div class="section">
+        <h3>4️⃣ Detailed Logs</h3>
+        <pre id="detailedLogs" style="min-height: 200px; margin-top: 10px;">Console logs will appear here...</pre>
+        <button class="btn btn-secondary mt-2" onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <!-- Section 5: Complete Flow Test -->
+    <div class="section">
+        <h3>5️⃣ Complete Flow Test</h3>
+        <p class="text-muted">This simulates the complete payment flow</p>
+        <button class="btn btn-danger btn-lg" onclick="runCompleteFlowTest()">Run Complete Test</button>
+        <div id="flowResults" style="margin-top: 15px;"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ============ LOGGING SYSTEM ============
+    const logBuffer = [];
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    function addLog(message, type = 'log') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logMessage = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+        logBuffer.push(logMessage);
+        updateLogsDisplay();
+    }
+
+    console.log = function(...args) {
+        addLog(args.join(' '), 'log');
+        originalLog.apply(console, args);
+    };
+
+    console.error = function(...args) {
+        addLog(args.join(' '), 'error');
+        originalError.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+        addLog(args.join(' '), 'warn');
+        originalWarn.apply(console, args);
+    };
+
+    function updateLogsDisplay() {
+        document.getElementById('detailedLogs').innerText = logBuffer.join('\n');
+        document.getElementById('detailedLogs').scrollTop = document.getElementById('detailedLogs').scrollHeight;
+    }
+
+    function clearLogs() {
+        logBuffer.length = 0;
+        updateLogsDisplay();
+    }
+
+    // ============ HELPER FUNCTIONS ============
+    function addResult(containerId, message, type = 'info') {
+        const container = document.getElementById(containerId);
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `test-result ${type}`;
+        resultDiv.innerText = message;
+        container.appendChild(resultDiv);
+    }
+
+    function clearResults() {
+        document.getElementById('networkResults').innerHTML = '';
+    }
+
+    // ============ CHECK ENVIRONMENT ============
+    function runEnvironmentCheck() {
+        console.log('=== ENVIRONMENT CHECK START ===');
+        
+        const envDiv = document.getElementById('envResults');
+        envDiv.innerHTML = '';
+
+        // Check 1: Booking ID
+        const bookingId = document.getElementById('bookingId').value;
+        console.log('Booking ID:', bookingId);
+        addResult('envResults', `✓ Booking ID: ${bookingId}`, 'success');
+
+        // Check 2: Payment Type
+        const paymentType = document.getElementById('paymentType').value;
+        console.log('Payment Type:', paymentType);
+        addResult('envResults', `✓ Payment Type: ${paymentType}`, 'success');
+
+        // Check 3: Route URL
+        const routeUrl = `/payment/${bookingId}/generate-snap-token`;
+        console.log('Route URL:', routeUrl);
+        addResult('envResults', `✓ API Route: ${routeUrl}`, 'success');
+
+        // Check 4: CSRF Token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 'NOT_FOUND';
+        console.log('CSRF Token exists:', csrfToken !== 'NOT_FOUND');
+        if (csrfToken !== 'NOT_FOUND') {
+            addResult('envResults', `✓ CSRF Token: ${csrfToken.substring(0, 20)}...`, 'success');
+        } else {
+            addResult('envResults', '✗ CSRF Token NOT FOUND', 'error');
+        }
+
+        console.log('=== ENVIRONMENT CHECK END ===');
+    }
+
+    // ============ TEST SNAP TOKEN API ============
+    async function testSnapTokenAPI() {
+        console.log('=== TESTING SNAP TOKEN API ===');
+
+        const bookingId = document.getElementById('bookingId').value;
+        const paymentType = document.getElementById('paymentType').value;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        const url = `/payment/${bookingId}/generate-snap-token`;
+        console.log(`Calling: POST ${url}`);
+        console.log(`Payment Type: ${paymentType}`);
+
+        try {
+            addResult('networkResults', `📤 Sending request to ${url}...`, 'info');
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: new URLSearchParams({
+                    payment_type: paymentType,
+                    _token: csrfToken,
+                }),
+            });
+
+            console.log('Response Status:', response.status);
+            console.log('Response OK:', response.ok);
+            addResult('networkResults', `📥 Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+            const data = await response.json();
+            console.log('Response Data:', data);
+
+            if (response.ok && data.status === 'success') {
+                addResult('networkResults', `✓ Token Generated: ${data.snap_token.substring(0, 30)}...`, 'success');
+                addResult('networkResults', `✓ Order ID: ${data.order_id}`, 'success');
+            } else {
+                addResult('networkResults', `✗ Error: ${data.message}`, 'error');
+                if (data.errors) {
+                    addResult('networkResults', `Details: ${JSON.stringify(data.errors)}`, 'warning');
+                }
+            }
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            addResult('networkResults', `✗ Network Error: ${error.message}`, 'error');
+        }
+
+        console.log('=== TESTING SNAP TOKEN API END ===');
+    }
+
+    // ============ CHECK SNAP LIBRARY ============
+    function checkSnapLibrary() {
+        console.log('=== CHECK SNAP LIBRARY ===');
+
+        const snapDiv = document.getElementById('snapResults');
+        snapDiv.innerHTML = '';
+
+        if (typeof snap !== 'undefined') {
+            addResult('snapResults', '✓ Midtrans Snap library is loaded', 'success');
+            console.log('Snap function type:', typeof snap);
+            console.log('Snap object:', snap);
+        } else {
+            addResult('snapResults', '✗ Snap library is NOT loaded', 'error');
+            addResult('snapResults', 'Add this to your HTML: <script src="https://app.sandbox.midtrans.com/snap/snap.js"><' + '/script>', 'warning');
+        }
+
+        console.log('=== CHECK SNAP LIBRARY END ===');
+    }
+
+    // ============ COMPLETE FLOW TEST ============
+    async function runCompleteFlowTest() {
+        console.log('=== COMPLETE FLOW TEST START ===');
+
+        const flowDiv = document.getElementById('flowResults');
+        flowDiv.innerHTML = '';
+
+        addResult('flowResults', '1️⃣ Running environment check...', 'info');
+        runEnvironmentCheck();
+        await new Promise(r => setTimeout(r, 500));
+
+        addResult('flowResults', '2️⃣ Checking Snap library...', 'info');
+        checkSnapLibrary();
+        await new Promise(r => setTimeout(r, 500));
+
+        addResult('flowResults', '3️⃣ Testing API request...', 'info');
+        await testSnapTokenAPI();
+        await new Promise(r => setTimeout(r, 500));
+
+        addResult('flowResults', '✅ Test Complete! Check console and logs above.', 'success');
+
+        console.log('=== COMPLETE FLOW TEST END ===');
+    }
+
+    // Display initial status
+    window.addEventListener('load', function() {
+        console.log('Debug page loaded');
+        addLog('Debug page initialized', 'log');
+    });
+</script>
+
+</body>
+</html>

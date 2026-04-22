@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Payment Flow</title>
+    <style>
+        body { font-family: Arial; background: #1a1a1a; color: #fff; padding: 20px; }
+        .section { background: #222; padding: 15px; margin: 10px 0; border-left: 3px solid #FFA500; }
+        .test { margin: 10px 0; padding: 10px; background: #333; border-radius: 5px; }
+        .success { background: #2a5a2a; }
+        .error { background: #5a2a2a; }
+        .warning { background: #5a4a2a; }
+        input { padding: 8px; width: 300px; background: #333; color: #fff; border: 1px solid #666; }
+        button { padding: 10px 20px; background: #FFA500; color: #000; border: none; cursor: pointer; border-radius: 5px; }
+        pre { background: #111; padding: 10px; overflow-x: auto; }
+        code { color: #0f0; }
+    </style>
+</head>
+<body>
+
+<h1>🔧 Debug Midtrans Payment Flow</h1>
+
+<div class="section">
+    <h3>1️⃣ Check Backend Configuration</h3>
+    <div class="test">
+        <label>Booking ID:</label><br>
+        <input type="number" id="bookingId" value="1" placeholder="Masukkan booking ID">
+    </div>
+</div>
+
+<div class="section">
+    <h3>2️⃣ Test Payment Token Generation</h3>
+    <button onclick="testPaymentToken('full')">Test Full Payment</button>
+    <button onclick="testPaymentToken('partial')">Test Partial Payment</button>
+    <pre id="tokenResponse"></pre>
+</div>
+
+<div class="section">
+    <h3>3️⃣ Snap Library Status</h3>
+    <div class="test" id="snapStatus"></div>
+</div>
+
+<div class="section">
+    <h3>4️⃣ Network Logs</h3>
+    <pre id="networkLog"></pre>
+</div>
+
+<script>
+    // Check Snap library
+    function checkSnapLibrary() {
+        const status = document.getElementById('snapStatus');
+        if (typeof snap !== 'undefined') {
+            status.innerHTML = '<span class="success">✓ Midtrans Snap library loaded</span>';
+        } else {
+            status.innerHTML = '<span class="error">✗ Midtrans Snap library NOT loaded</span>';
+        }
+    }
+
+    // Test payment token generation
+    async function testPaymentToken(paymentType) {
+        const bookingId = document.getElementById('bookingId').value;
+        const url = `/payment/${bookingId}/generate-snap-token`;
+        const responseDiv = document.getElementById('tokenResponse');
+        const logDiv = document.getElementById('networkLog');
+        
+        responseDiv.innerHTML = '⏳ Mengirim request...';
+        
+        try {
+            // Get CSRF token from meta tag or form
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                             document.querySelector('input[name="_token"]')?.value ||
+                             'NOT_FOUND';
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `payment_type=${paymentType}&_token=${csrfToken}`,
+            });
+
+            const data = await response.json();
+            
+            // Log network details
+            logDiv.innerHTML = `
+<span class="warning">Request URL:</span> ${url}
+<span class="warning">Payment Type:</span> ${paymentType}
+<span class="warning">Status Code:</span> ${response.status}
+<span class="warning">CSRF Token:</span> ${csrfToken.substring(0, 20)}...
+            `;
+
+            if (response.ok && data.status === 'success') {
+                responseDiv.innerHTML = `<span class="success">✓ Token Generated Successfully!</span>
+<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } else {
+                responseDiv.innerHTML = `<span class="error">✗ Error: ${data.message || 'Unknown error'}</span>
+<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+        } catch (error) {
+            responseDiv.innerHTML = `<span class="error">✗ Network Error</span>
+<pre>${error.message}</pre>`;
+            logDiv.innerHTML = `<span class="error">Error: ${error}</span>`;
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        checkSnapLibrary();
+    });
+</script>
+
+</body>
+</html>

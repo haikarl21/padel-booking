@@ -1,0 +1,31 @@
+# TEMPLATE: How to update .env with real Midtrans keys
+
+# ❌ CURRENT (DUMMY - DELETE THESE):
+# MIDTRANS_SERVER_KEY=SB-Mid-server-ABC123XYZ789
+# MIDTRANS_CLIENT_KEY=SB-Mid-client-ABC123XYZ789
+
+# ✅ AFTER UPDATE (EXAMPLE - with real keys):
+# MIDTRANS_SERVER_KEY=SB-Mid-server-4ZZfjFWZPvyTfLFP5PWaHSMQ
+# MIDTRANS_CLIENT_KEY=SB-Mid-client-V1Nh5N2yl6u7zDhR3KmT9pLx
+
+# INSTRUCTIONS:
+# 1. Go to https://sandbox.midtrans.com
+# 2. Login to your Sandbox account
+# 3. Click Settings (⚙️ icon) → Access Keys
+# 4. Copy the Server Key (starts with SB-Mid-server-)
+# 5. Copy the Client Key (starts with SB-Mid-client-)
+# 6. Edit .env file:
+#    - Find line: MIDTRANS_SERVER_KEY=
+#    - Replace with: MIDTRANS_SERVER_KEY=SB-Mid-server-[YOUR_ACTUAL_KEY]
+#    - Find line: MIDTRANS_CLIENT_KEY=
+#    - Replace with: MIDTRANS_CLIENT_KEY=SB-Mid-client-[YOUR_ACTUAL_KEY]
+# 7. Save the file
+# 8. Run: php artisan config:clear
+# 9. Restart Laravel server
+# 10. Test payment again!
+
+# NOTES:
+# - Keys are LONG strings, make sure you copy the entire length
+# - Don't include quotes or extra spaces
+# - Server Key should NOT be exposed in frontend
+# - For production, use production keys (format: Mid-server-xxx, without SB-)

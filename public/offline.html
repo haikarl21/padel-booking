@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d6efd">
+    <title>Offline - Padel House</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #FFA500;
+            font-weight: 700;
+        }
+        
+        p {
+            font-size: 16px;
+            color: #999999;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #FFA500;
+            color: #000000;
+        }
+        
+        .btn-primary:hover {
+            background-color: #ffb81a;
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: #FFA500;
+            border: 2px solid #FFA500;
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(255, 165, 0, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .tips {
+            padding: 20px;
+            background: rgba(26, 26, 26, 0.7);
+            border-radius: 10px;
+            border-left: 4px solid #FFA500;
+            text-align: left;
+            backdrop-filter: blur(10px);
+        }
+        
+        .tips h3 {
+            color: #FFA500;
+            margin-bottom: 10px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tips ul {
+            list-style: none;
+            font-size: 14px;
+            color: #cccccc;
+        }
+        
+        .tips li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .tips li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #FFA500;
+            font-weight: bold;
+        }
+        
+        .cached-pages {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 14px;
+            color: #999999;
+        }
+        
+        .cached-pages strong {
+            color: #FFA500;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        <h1>Koneksi Terputus</h1>
+        <p>Saatnya Anda terhubung kembali ke internet untuk mengakses Padel House secara penuh.</p>
+        
+        <div class="button-group">
+            <button class="btn-primary" onclick="location.reload()">
+                ↻ Muat Ulang
+            </button>
+            <button class="btn-secondary" onclick="history.back()">
+                ← Kembali
+            </button>
+        </div>
+        
+        <div class="tips">
+            <h3>💡 Apa yang bisa saya lakukan?</h3>
+            <ul>
+                <li>Periksa kembali koneksi internet Anda</li>
+                <li>Aktifkan WiFi atau data seluler</li>
+                <li>Pastikan airplane mode sudah dimatikan</li>
+                <li>Coba muat ulang halaman setelah terhubung</li>
+            </ul>
+        </div>
+        
+        <div class="cached-pages" style="margin-top: 30px;">
+            <strong>💾 Informasi Teknis:</strong><br>
+            Beberapa halaman mungkin tersimpan di cache lokal dan bisa diakses offline. 
+            Namun fitur-fitur yang memerlukan koneksi internet (seperti booking dan pembayaran) 
+            tidak akan berfungsi sampai Anda terhubung kembali.
+        </div>
+    </div>
+    
+    <script>
+        // Update status koneksi secara real-time
+        window.addEventListener('online', () => {
+            console.log('Connection restored');
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                right: 20px;
+                background: #FFA500;
+                color: black;
+                padding: 15px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 9999;
+                animation: slideDown 0.3s ease;
+            `;
+            notification.innerHTML = '✓ Koneksi sudah tersambung! Halaman akan dimuat ulang...';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => location.reload(), 1500);
+        });
+        
+        // Log offline status
+        console.log('Page loaded in offline mode');
+    </script>
+</body>
+</html>
