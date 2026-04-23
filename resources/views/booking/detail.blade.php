@@ -44,8 +44,8 @@
                             </h5>
                             
                             <!-- BARCODE IMAGE -->
-                            <div class="mb-3" style="background: white; padding: 15px; border-radius: 8px; display: inline-block;">
-                                <svg id="barcodeDisplay" style="max-width: 300px; height: 80px;"></svg>
+                            <div class="mb-3 w-100" style="background: white; padding: 15px; border-radius: 8px; display: inline-block; max-width: 100%; overflow: hidden;">
+                                <svg id="barcodeDisplay" style="max-width: 100%; height: auto; width: 100%;"></svg>
                             </div>
                             
                             <!-- BOOKING CODE TEXT -->
