@@ -1,139 +1,242 @@
 // Service Worker untuk Padel House PWA
-// Version: 1.2.0
-// Fokus: stabil di localhost, tidak mengganggu Midtrans/payment.
+// Version: 2.0.0 - FIXED untuk Payment Flow & Camera
+// Fokus: Network-first untuk dynamic content, cache static assets saja
 
-const CACHE_VERSION = 'padel-house-v1.2.0';
+const CACHE_VERSION = 'padel-house-v2.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_URL = '/offline.html';
 
-// Routes/host yang TIDAK boleh di-cache (API sensitif, pembayaran, dll)
-const EXCLUDED_CACHE_ROUTES = [
-  '/api/',
-  '/payment',
-  '/midtrans',
+// ================================================================================
+// CRITICAL: Routes yang TIDAK boleh di-cache sama sekali
+// - Jangan ubah array ini tanpa test menyeluruh!
+// ================================================================================
+const NO_CACHE_ROUTES = [
+  // Booking Flow
+  '/courts',
+  '/booking/',
+  '/booking/create',
   '/booking/store',
   '/booking/update',
+  '/booking/show',
+  '/select-datetime',
+  '/select-payment-method',
+  
+  // Payment & Midtrans
+  '/payment',
+  '/midtrans/',
+  '/midtrans-callback',
   'snap.midtrans.com',
   'app.midtrans.com',
-  'app.sandbox.midtrans.com'
+  'app.sandbox.midtrans.com',
+  
+  // Tracking & Camera
+  '/track-booking',
+  '/search-booking',
+  
+  // API Calls
+  '/api/',
+  
+  // Library dinamis yang perlu selalu fresh
+  'html5-qrcode'
 ];
 
-// Asset minimum untuk offline experience
+// Asset statis yang AMAN untuk di-cache (tidak berubah sering)
 const STATIC_ASSETS = [
   OFFLINE_URL,
-  '/'
+  '/',
+  '/manifest.json'
 ];
 
+// ================================================================================
+// INSTALL EVENT - Cache hanya file statis minimal
+// ================================================================================
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing Service Worker v2.0.0');
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .catch(() => undefined)
-      .then(() => self.skipWaiting())
+      .then((cache) => {
+        console.log('[SW] Caching static assets...');
+        return cache.addAll(STATIC_ASSETS).catch(() => {
+          console.warn('[SW] Some assets failed to cache (offline.html may not exist)');
+        });
+      })
+      .then(() => {
+        console.log('[SW] Calling skipWaiting()');
+        return self.skipWaiting();
+      })
   );
 });
 
+// ================================================================================
+// ACTIVATE EVENT - Cleanup cache lama
+// ================================================================================
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating Service Worker');
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys.map((key) => {
-            if (key.startsWith('padel-house-') && !key.startsWith(CACHE_VERSION)) {
-              return caches.delete(key);
-            }
-          })
-        )
-      )
-      .then(() => self.clients.claim())
+    caches.keys().then((keys) => {
+      console.log('[SW] Existing caches:', keys);
+      return Promise.all(
+        keys.map((key) => {
+          // Delete old cache versions
+          if (key.startsWith('padel-house-') && key !== STATIC_CACHE && key !== RUNTIME_CACHE) {
+            console.log('[SW] Deleting old cache:', key);
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('[SW] Calling clients.claim()');
+      return self.clients.claim();
+    })
   );
 });
 
+// ================================================================================
+// FETCH EVENT - Network-first untuk payment/booking, cache-first untuk static
+// ================================================================================
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
+  // 1. Non-GET requests: selalu network
   if (request.method !== 'GET') {
     return;
   }
 
-  const url = new URL(request.url);
-
-  if (shouldExcludeFromCache(url)) {
-    event.respondWith(fetch(request));
+  // 2. Routes yang critical: JANGAN di-cache
+  if (shouldNotCache(url)) {
+    console.log('[SW] Network-only:', url.pathname);
+    event.respondWith(
+      fetch(request).catch(() => {
+        if (request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL) || new Response('Offline', { status: 503 });
+        }
+        throw new Error('Network request failed');
+      })
+    );
     return;
   }
 
-  // Navigasi halaman: network-first, fallback ke offline
+  // 3. Static navigation (document): network-first dengan fallback cache
   if (request.mode === 'navigate' || request.destination === 'document') {
+    console.log('[SW] Navigation (network-first):', url.pathname);
     event.respondWith(networkFirstNavigation(request));
     return;
   }
 
-  // Asset statis same-origin: cache-first
-  if (isStaticAssetRequest(url, request)) {
-    event.respondWith(cacheFirst(request));
+  // 4. Static assets (CSS, JS, images, fonts): cache-first
+  if (isStaticAsset(url, request)) {
+    console.log('[SW] Static asset (cache-first):', url.pathname);
+    event.respondWith(cacheFirstWithNetworkFallback(request));
     return;
   }
 
-  // Default: stale-while-revalidate untuk request lain (aman, tapi tidak agresif)
-  event.respondWith(staleWhileRevalidate(request));
+  // 5. Default: network-first untuk XHR/fetch calls (API, page fragments)
+  console.log('[SW] Other request (network-first):', url.pathname);
+  event.respondWith(networkFirstWithCacheFallback(request));
 });
 
-function shouldExcludeFromCache(url) {
+// ================================================================================
+// HELPERS
+// ================================================================================
+
+/**
+ * Check jika URL harus TIDAK di-cache (network-only)
+ */
+function shouldNotCache(url) {
   const urlString = url.toString();
-  return EXCLUDED_CACHE_ROUTES.some((route) => urlString.includes(route));
+  return NO_CACHE_ROUTES.some((route) => urlString.includes(route));
 }
 
-function isStaticAssetRequest(url, request) {
+/**
+ * Check jika request adalah static asset (aman di-cache)
+ */
+function isStaticAsset(url, request) {
   if (url.origin !== self.location.origin) return false;
-  if (['script', 'style', 'image', 'font'].includes(request.destination)) return true;
-  return /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf|eot)(\?.*)?$/i.test(url.pathname);
+  
+  const destination = request.destination;
+  if (['script', 'style', 'image', 'font'].includes(destination)) {
+    return true;
+  }
+  
+  const pathname = url.pathname;
+  return /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff2?|ttf|eot)(\?.*)?$/i.test(pathname);
 }
 
+/**
+ * Network-first untuk navigasi (halaman)
+ * Coba network dulu, fallback ke cache lama atau offline page
+ */
 async function networkFirstNavigation(request) {
   try {
-    return await fetch(request);
-  } catch {
-    return (
-      (await caches.match(OFFLINE_URL)) ||
-      new Response('Offline', {
-        status: 503,
-        headers: { 'Content-Type': 'text/plain' }
-      })
-    );
+    const response = await fetch(request);
+    if (response && response.ok) {
+      // Cache the successful response
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    console.error('[SW] Navigation fetch failed:', error);
+    // Fallback ke cache atau offline page
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    
+    return caches.match(OFFLINE_URL) || new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }
 
-async function cacheFirst(request) {
+/**
+ * Cache-first untuk static assets
+ * Gunakan cache jika ada, network jika tidak
+ */
+async function cacheFirstWithNetworkFallback(request) {
   const cached = await caches.match(request);
-  if (cached) return cached;
-
-  const response = await fetch(request);
-  if (response && response.ok) {
-    const cache = await caches.open(RUNTIME_CACHE);
-    cache.put(request, response.clone()).catch(() => undefined);
+  if (cached) {
+    console.log('[SW] Served from cache:', request.url);
+    return cached;
   }
-  return response;
+
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    console.error('[SW] Asset fetch failed:', error);
+    throw new Error('Asset not available');
+  }
 }
 
-async function staleWhileRevalidate(request) {
+/**
+ * Network-first untuk XHR/API calls
+ * Coba network dulu, fallback ke cache jika offline
+ */
+async function networkFirstWithCacheFallback(request) {
   const cache = await caches.open(RUNTIME_CACHE);
-  const cached = await cache.match(request);
 
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response && response.ok) {
-        const url = new URL(request.url);
-        if (url.origin === self.location.origin) {
-          cache.put(request, response.clone()).catch(() => undefined);
-        }
-      }
-      return response;
-    })
-    .catch(() => undefined);
-
-  return cached || (await fetchPromise) || new Response('Service unavailable', { status: 503 });
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    console.error('[SW] Network request failed:', error);
+    // Fallback ke cache jika ada
+    const cached = await cache.match(request);
+    if (cached) {
+      console.log('[SW] Served from cache (offline):', request.url);
+      return cached;
+    }
+    
+    throw new Error('Offline and no cached response');
+  }
 }

@@ -7,7 +7,9 @@
     <meta name="theme-color" content="#0d6efd">
     <meta name="msapplication-TileColor" content="#0d6efd">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAACoAIABAAAAAEAAADAoAMABAAAAAEAAADAAAAAA8z/1QAAH0lEQVR4Ae3BMQEAAADCoPVPbQ0PoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA1v9QAAZX3/5sAAAAASUVORK5CYII=">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     <title>Padel House - Lapangan Padel Profesional</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -22,7 +24,7 @@
         
         body {
             background-color: var(--primary-dark);
-            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%), url('/images/images%20(3).jfif');
+            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%), url('{{ asset('images/court.jpg') }}');
             background-size: 100% auto;
             background-position: center top;
             background-attachment: fixed;
@@ -37,7 +39,6 @@
             min-height: 100vh;
             display: block;
             position: relative;
-            z-index: 1;
         }
         
         .navbar-custom {
@@ -113,7 +114,7 @@
         
         .hero-section {
             background-color: var(--primary-dark);
-            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.75) 0%, rgba(20, 20, 20, 0.6) 100%), url('/images/images%20(3).jfif');
+            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.75) 0%, rgba(20, 20, 20, 0.6) 100%), url('{{ asset('images/court.jpg') }}');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -168,7 +169,7 @@
         
         .stats-hero-section {
             background-color: var(--primary-dark);
-            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%), url('/images/images%20(3).jfif');
+            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.45) 0%, rgba(20, 20, 20, 0.35) 100%), url('{{ asset('images/court.jpg') }}');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -242,7 +243,7 @@
         footer {
             background-color: var(--secondary-dark) !important;
             border-top: 1px solid #333333;
-            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 20, 20, 0.92) 100%), url('/images/images%20(3).jfif');
+            background-image: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 20, 20, 0.92) 100%), url('{{ asset('images/court.jpg') }}');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -378,6 +379,15 @@
         #pwa-install-button .btn i {
             font-size: 1.1rem;
         }
+
+        /* Ensure modals are always on top and clickable */
+        .modal {
+            z-index: 2000;
+        }
+
+        .modal-backdrop {
+            z-index: 1990;
+        }
     </style>
 </head>
 <body>
@@ -425,10 +435,10 @@
         // ========== Service Worker Registration ==========
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('{{ asset("service-worker.js") }}?v=1.2.0', {
+                navigator.serviceWorker.register('{{ asset("service-worker.js") }}?v=2.0.0', {
                     scope: '/'
                 }).then(registration => {
-                    console.log('✓ Service Worker registered successfully');
+                    console.log('✓ Service Worker registered successfully (v2.0.0)');
                     
                     // Check untuk updates setiap jam
                     setInterval(() => {

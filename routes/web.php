@@ -59,6 +59,9 @@ Route::post('/payment/create-transaction', [PaymentController::class, 'createTra
 Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/check-status/{order_id}', [PaymentController::class, 'checkStatusFromMidtrans'])->name('check-status');
 
+// Legacy route used by older payment UI/tests
+Route::post('/payment/{booking}/process', [PaymentController::class, 'process'])->name('payment.process');
+
 // OLD CUSTOM PAYMENT (KEEP FOR LEGACY)
 Route::get('/payment/{booking}/select-method', [PaymentController::class, 'selectMethod'])->name('payment.select-method');
 Route::post('/payment/{booking}/select-method', [PaymentController::class, 'storeMethod'])->name('payment.store-method');

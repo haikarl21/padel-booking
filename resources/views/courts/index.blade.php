@@ -17,9 +17,8 @@
             <div class="col-lg-6 col-xl-4">
                 <div class="card-custom h-100 d-flex flex-column">
                     @php
-                        // use an online padel court photo as default for first card so it always shows
-                        $defaultImage = 'https://images.unsplash.com/photo-1542730873-7a4d3e991497?auto=format&fit=crop&w=1000&q=80';
-                        $imgUrl = $court->image_path ? asset('storage/' . $court->image_path) : ( $loop->first ? $defaultImage : null );
+                        $defaultImage = asset('images/court.jpg');
+                        $imgUrl = $court->image_path ? asset('storage/' . $court->image_path) : $defaultImage;
                     @endphp
                     @if($imgUrl)
                         <div class="position-relative overflow-hidden" style="height: 250px;">
@@ -42,6 +41,7 @@
 
                         <h6 class="text-warning fw-bold mb-3">
                             Rp {{ number_format($court->price_per_hour, 0, ',', '.') }} <small style="color: #ffffff;">/jam</small>
+                        </h6>
 
                         @if($court->description)
                             <p class="card-text mb-4" style="color: #ffffff;">{{ $court->description }}</p>

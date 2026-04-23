@@ -32,10 +32,11 @@
                         <!-- BARCODE SECTION - HANYA TAMPIL SETELAH PEMBAYARAN BERHASIL -->
                         @php
                             $payment = $booking->payments->sortBy('created_at')->last();
-                            $isPaymentCompleted = $payment && ($payment->status === 'success' || $payment->status === 'completed');
+                            $isPaymentCompleted = $payment && in_array($payment->status, ['success', 'completed', 'settlement', 'capture'], true);
+                            $isFullyPaid = $booking->status === 'approved' || (float) $booking->remaining <= 0;
                         @endphp
 
-                        @if($isPaymentCompleted)
+                        @if($isPaymentCompleted && $isFullyPaid)
                         <div class="mb-4 p-4" style="border: 3px solid #28a745; border-radius: 12px; background-color: #25452f; text-align: center;">
                             <!-- BARCODE TITLE -->
                             <h5 class="fw-bold mb-3" style="color: #90EE90;">
@@ -184,7 +185,7 @@
                                         <span class="fw-bold">
                                             Metode Pembayaran: {{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}
                                         </span>
-                                        <span class="badge {{ $payment->status === 'success' || $payment->status === 'completed' ? 'bg-success' : 'bg-warning' }}">
+                                        <span class="badge {{ in_array($payment->status, ['success','completed','settlement','capture'], true) ? 'bg-success' : 'bg-warning' }}">
                                             {{ ucfirst($payment->status) }}
                                         </span>
                                     </div>
@@ -241,7 +242,7 @@
                 <div class="row g-3">
                     <!-- Full Payment Option -->
                     <div class="col-12">
-                        <div class="payment-option p-3 rounded border-2" style="border-color: #FFA500; cursor: pointer; background-color: #1a1a1a;" onclick="selectPaymentType('full')">
+                        <button type="button" class="payment-option p-3 rounded border-2 w-100 text-start" style="border-color: #FFA500; cursor: pointer; background-color: #1a1a1a; color: inherit;" data-payment-type="full">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="fw-bold mb-1" style="color: #FFA500;">
@@ -250,27 +251,30 @@
                                     <small style="color: #999999;">Bayar seluruh jumlah sekarang</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="fw-bold text-warning fs-5">Rp {{ number_format($booking->total_price, 0, ',', '.') }}</span>
+                                    <span class="fw-bold text-warning fs-5">Rp {{ number_format($booking->remaining > 0 ? $booking->remaining : $booking->total_price, 0, ',', '.') }}</span>
                                 </div>
                             </div>
-                        </div>
+                        </button>
                     </div>
 
                     <!-- Partial Payment Option -->
                     <div class="col-12">
-                        <div class="payment-option p-3 rounded border-2" style="border-color: #666666; cursor: pointer; background-color: #1a1a1a;" onclick="selectPaymentType('partial')">
+                        <button type="button" class="payment-option p-3 rounded border-2 w-100 text-start" style="border-color: #666666; cursor: pointer; background-color: #1a1a1a; color: inherit;" data-payment-type="partial" @if((float)$booking->paid > 0) disabled @endif>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="fw-bold mb-1" style="color: #ffffff;">
                                         <i class="fas fa-hand-holding-usd"></i> Pembayaran 50%
                                     </h6>
                                     <small style="color: #999999;">Bayar separuh sekarang, separuh nanti</small>
+                                    @if((float)$booking->paid > 0)
+                                        <div class="mt-1"><small class="text-warning">Sudah ada pembayaran. Pilih pembayaran penuh untuk melunasi sisa.</small></div>
+                                    @endif
                                 </div>
                                 <div class="text-end">
                                     <span class="fw-bold text-warning fs-5">Rp {{ number_format($booking->total_price * 0.5, 0, ',', '.') }}</span>
                                 </div>
                             </div>
-                        </div>
+                        </button>
                     </div>
                 </div>
 
@@ -294,33 +298,21 @@
 <!-- Load JsBarcode Library for Barcode Generation -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
-<!-- Load Midtrans Snap JS Library (PRODUCTION) -->
-<script src="https://app.sandbox.midtrans.com/snap/snap.js"></script>
+<!-- Load Midtrans Snap JS Library -->
+<script
+    src="{{ config('midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+    data-client-key="{{ config('midtrans.client_key') }}"></script>
 
 <script>
-    /**
-     * WAIT untuk Snap library load sebelum set configuration
-     */
-    function initMidtrans() {
-        if (typeof window.Midtrans === 'undefined' || typeof snap === 'undefined') {
-            console.log('⏳ Snap library sedang load...');
-            setTimeout(initMidtrans, 100);
-            return;
+    // Snap will read client key from script tag attribute `data-client-key`
+
+    // Move the modal to body to prevent z-index and stacking context issues
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('paymentTypeModal');
+        if (modal) {
+            document.body.appendChild(modal);
         }
-        
-        console.log('✓ Snap library loaded successfully');
-        
-        // Set client key setelah library loaded
-        window.Midtrans.clientKey = '{{ config("midtrans.client_key") }}';
-        
-        // Debug log
-        console.log('=== MIDTRANS INITIALIZATION COMPLETE ===');
-        console.log('Client Key:', window.Midtrans.clientKey);
-        console.log('snap.pay available:', typeof snap.pay === 'function');
-    }
-    
-    // Trigger initialization
-    initMidtrans();
+    });
 
     /**
      * VARIABEL GLOBAL
@@ -352,7 +344,7 @@
             typeModal.hide();
         }
 
-        // Langsung fetch Snap token (tanpa show methodModal)
+        // Langsung fetch Snap token
         fetchSnapToken(paymentType);
     }
 
@@ -370,6 +362,10 @@
         console.log('Route:', SNAP_TOKEN_ROUTE);
         console.log('Booking ID:', BOOKING_ID);
         
+        // UI: show loading
+        document.querySelectorAll('.payment-option').forEach(el => el.style.display = 'none');
+        document.getElementById('paymentLoading').classList.remove('d-none');
+
         // Siapkan data untuk request
         const formData = new FormData();
         formData.append('booking_id', BOOKING_ID);
@@ -550,7 +546,7 @@
                     showAlert('✓ Status: ' + data.message, 'success');
                     
                     // Auto reload untuk menampilkan data terupdate
-                    if (data.status === 'success') {
+                    if (['settlement', 'capture', 'success', 'completed'].includes(data.status)) {
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);
@@ -614,7 +610,7 @@
                     showAlert('✓ Status diperbarui: ' + data.message, 'success');
                     
                     // Auto reload untuk menampilkan barcode jika payment berhasil
-                    if (data.status === 'success' || data.status === 'completed') {
+                    if (['settlement', 'capture', 'success', 'completed'].includes(data.status)) {
                         setTimeout(() => {
                             window.location.reload();
                         }, 1500);
@@ -717,10 +713,16 @@
             initializeBarcode();
         }
         
-        // Payment option hover effects
+        // Payment option click + hover effects
         document.querySelectorAll('.payment-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const type = this.getAttribute('data-payment-type');
+                if (this.disabled) return;
+                if (!type) return;
+                selectPaymentType(type);
+            });
             option.addEventListener('mouseenter', function() {
-                this.style.opacity = '0.8';
+                if (!this.disabled) this.style.opacity = '0.8';
             });
             option.addEventListener('mouseleave', function() {
                 this.style.opacity = '1';

@@ -24,9 +24,10 @@
                                      class="w-100 h-100 object-fit-cover">
                             </div>
                         @else
-                            <div class="bg-secondary d-flex align-items-center justify-content-center mb-4 rounded-3"
-                                 style="height: 200px;">
-                                <span class="text-white display-6 fw-bold">{{ $court->name }}</span>
+                            <div class="mb-4 overflow-hidden rounded-3" style="height: 200px;">
+                                <img src="{{ asset('images/court.jpg') }}"
+                                     alt="{{ $court->name }}"
+                                     class="w-100 h-100 object-fit-cover">
                             </div>
                         @endif
 

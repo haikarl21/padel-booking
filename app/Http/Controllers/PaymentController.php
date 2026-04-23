@@ -6,18 +6,58 @@ use App\Models\Booking;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     public function createTransaction(Request $request)
     {
         try {
+            $request->validate([
+                'booking_id' => 'required|exists:bookings,id',
+                'payment_type' => 'required|in:full,partial',
+            ]);
+
             $booking = Booking::findOrFail($request->booking_id);
+
+            // Block new transactions if already fully approved
+            if ($booking->status === 'approved' || (float) $booking->remaining <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking sudah dibayar.',
+                ], 400);
+            }
+
+            $paymentType = $request->input('payment_type');
+
+            // Partial payment only allowed as first payment (50% of total)
+            if ($paymentType === 'partial' && (float) $booking->paid > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran 50% hanya bisa dilakukan sebagai pembayaran pertama. Silakan pilih pembayaran penuh untuk melunasi sisa.',
+                ], 400);
+            }
+
+            $amountToPay = $paymentType === 'partial'
+                ? ((float) $booking->total_price * 0.5)
+                : (float) $booking->remaining;
+
+            // Ensure positive amount
+            $amountToPay = max(0, $amountToPay);
+
+            if ($amountToPay <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada tagihan yang perlu dibayar.',
+                ], 400);
+            }
 
             // Set Midtrans config
             \Midtrans\Config::$serverKey = config('midtrans.server_key');
             \Midtrans\Config::$clientKey = config('midtrans.client_key');
             \Midtrans\Config::$isProduction = config('midtrans.is_production');
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
 
             // Create order
             $order_id = 'ORDER-' . strtoupper(Str::random(10)) . '-' . time();
@@ -25,7 +65,7 @@ class PaymentController extends Controller
             // Payment param  
             $transaction_details = array(
                 'order_id' => $order_id,
-                'gross_amount' => (int)$booking->total_price,
+                'gross_amount' => (int) round($amountToPay),
             );
 
             $customer_details = array(
@@ -47,18 +87,28 @@ class PaymentController extends Controller
             $snapToken = \Midtrans\Snap::getSnapToken($transaction);
 
             // Save to database
-            Payment::create([
+            $payment = new Payment();
+            $payment->booking_id = $booking->id;
+            $payment->order_id = $order_id;
+            $payment->amount = $amountToPay;
+            $payment->gross_amount = $amountToPay;
+            $payment->status = 'pending';
+            $payment->payment_type = $paymentType;
+            $payment->payment_method = 'midtrans_snap';
+            $payment->snap_token = $snapToken;
+            $payment->save();
+
+            Log::info('Midtrans transaction created', [
                 'booking_id' => $booking->id,
                 'order_id' => $order_id,
-                'amount' => $booking->total_price,
-                'status' => 'pending',
-                'payment_type' => 'full',
-                'snap_token' => $snapToken,
+                'payment_type' => $paymentType,
+                'amount' => $amountToPay,
             ]);
 
             return response()->json([
                 'success' => true,
                 'snap_token' => $snapToken,
+                'order_id' => $order_id,
             ]);
 
         } catch (\Exception $e) {
@@ -78,13 +128,44 @@ class PaymentController extends Controller
             $payment = Payment::where('order_id', $request->order_id)->first();
 
             if ($payment) {
-                if ($request->transaction_status == 'settlement' || $request->transaction_status == 'capture') {
-                    $payment->update(['status' => 'success']);
-                    $payment->booking->update(['status' => 'approved']);
-                } else if ($request->transaction_status == 'pending') {
-                    $payment->update(['status' => 'pending']);
-                } else if ($request->transaction_status == 'deny' || $request->transaction_status == 'cancel' || $request->transaction_status == 'expire') {
-                    $payment->update(['status' => 'failed']);
+                $txStatus = $request->transaction_status;
+
+                if ($txStatus === 'settlement' || $txStatus === 'capture') {
+                    // Idempotent: only set paid_at once
+                    if ($payment->status !== 'settlement') {
+                        $payment->status = 'settlement';
+                        $payment->transaction_id = $request->transaction_id;
+                        $payment->midtrans_signature_key = $request->signature_key;
+                        $payment->midtrans_response = json_encode($request->all());
+                        $payment->paid_at = $payment->paid_at ?? now();
+                        $payment->save();
+                    }
+
+                    $booking = $payment->booking;
+
+                    // Recalculate from successful payments to avoid double counting
+                    $paidTotal = (float) $booking->payments()
+                        ->whereIn('status', ['settlement', 'capture'])
+                        ->sum('amount');
+
+                    $remaining = max(0, (float) $booking->total_price - $paidTotal);
+                    $booking->paid = $paidTotal;
+                    $booking->remaining = $remaining;
+                    $booking->status = $remaining <= 0 ? 'approved' : 'partial';
+                    $booking->save();
+
+                } elseif ($txStatus === 'pending') {
+                    $payment->update([
+                        'status' => 'pending',
+                        'midtrans_signature_key' => $request->signature_key,
+                        'midtrans_response' => json_encode($request->all()),
+                    ]);
+                } elseif (in_array($txStatus, ['deny', 'cancel', 'expire'])) {
+                    $payment->update([
+                        'status' => $txStatus === 'expire' ? 'expired' : 'failed',
+                        'midtrans_signature_key' => $request->signature_key,
+                        'midtrans_response' => json_encode($request->all()),
+                    ]);
                 }
             }
         }
@@ -105,14 +186,17 @@ class PaymentController extends Controller
 
             // Map Midtrans status to local status
             $transaction_status = $status->transaction_status ?? 'unknown';
-            
-            if ($transaction_status == 'settlement' || $transaction_status == 'capture') {
-                $local_status = 'success';
+
+            if ($transaction_status === 'settlement' || $transaction_status === 'capture') {
+                $local_status = 'settlement';
                 $message = 'Pembayaran Berhasil';
-            } else if ($transaction_status == 'pending') {
+            } elseif ($transaction_status === 'pending') {
                 $local_status = 'pending';
                 $message = 'Menunggu Pembayaran';
-            } else if ($transaction_status == 'expire' || $transaction_status == 'cancel' || $transaction_status == 'deny') {
+            } elseif ($transaction_status === 'expire') {
+                $local_status = 'expired';
+                $message = 'Pembayaran Kedaluwarsa';
+            } elseif (in_array($transaction_status, ['cancel', 'deny'])) {
                 $local_status = 'failed';
                 $message = 'Pembayaran Gagal';
             } else {
@@ -122,12 +206,28 @@ class PaymentController extends Controller
 
             // Update database jika ada perubahan status
             $payment = Payment::where('order_id', $order_id)->first();
-            if ($payment && $payment->status != $local_status) {
-                $payment->update(['status' => $local_status]);
-                
-                // Update booking jika pembayaran berhasil
-                if ($local_status == 'success') {
-                    $payment->booking->update(['status' => 'approved']);
+            if ($payment && $payment->status !== $local_status) {
+                $payment->status = $local_status;
+                $payment->transaction_id = $status->transaction_id ?? $payment->transaction_id;
+                $payment->midtrans_response = json_encode($status);
+                if ($local_status === 'settlement' && !$payment->paid_at) {
+                    $payment->paid_at = now();
+                }
+                $payment->save();
+            }
+
+            // Update booking totals/status when paid
+            if ($payment && in_array($local_status, ['settlement', 'capture'], true)) {
+                $booking = $payment->booking;
+                if ($booking) {
+                    $paidTotal = (float) $booking->payments()
+                        ->whereIn('status', ['settlement', 'capture'])
+                        ->sum('amount');
+                    $remaining = max(0, (float) $booking->total_price - $paidTotal);
+                    $booking->paid = $paidTotal;
+                    $booking->remaining = $remaining;
+                    $booking->status = $remaining <= 0 ? 'approved' : 'partial';
+                    $booking->save();
                 }
             }
 
@@ -326,6 +426,69 @@ class PaymentController extends Controller
             return redirect()->back()
                 ->with('error', 'Gagal memuat data pembayaran.');
         }
+    }
+
+    /**
+     * Legacy payment endpoint (used by older UI/tests).
+     * - Validates optional proof_file
+     * - For payment_method=qris: mark as completed immediately (non-Midtrans).
+     */
+    public function process(Request $request, Booking $booking)
+    {
+        $validated = $request->validate([
+            'payment_type' => 'required|in:full,partial',
+            'payment_method' => 'required|string|max:50',
+            'proof_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        ]);
+
+        $paymentType = $validated['payment_type'];
+        $paymentMethod = strtolower($validated['payment_method']);
+
+        // Compute amount: partial = 50% of total (first payment), full = remaining
+        $amountToPay = $paymentType === 'partial'
+            ? ((float) $booking->total_price * 0.5)
+            : (float) $booking->remaining;
+        $amountToPay = max(0, $amountToPay);
+
+        $payment = new Payment();
+        $payment->booking_id = $booking->id;
+        $payment->order_id = $payment->order_id ?? ('LEGACY-' . strtoupper(Str::random(10)) . '-' . time());
+        $payment->payment_type = $paymentType;
+        $payment->payment_method = $paymentMethod;
+        $payment->amount = $amountToPay;
+        $payment->gross_amount = $amountToPay;
+
+        if ($request->hasFile('proof_file')) {
+            $path = $request->file('proof_file')->store('payment-proofs', 'public');
+            $payment->proof_file_path = $path;
+        }
+
+        // For legacy QRIS we mark as completed immediately (for testing/backward compatibility)
+        if ($paymentMethod === 'qris') {
+            $payment->status = 'completed';
+            $payment->paid_at = now();
+        } else {
+            // Other methods remain pending in legacy flow
+            $payment->status = 'pending';
+        }
+
+        $payment->save();
+
+        // Update booking totals/status if completed
+        if ($payment->status === 'completed') {
+            $paidTotal = (float) $booking->payments()
+                ->whereIn('status', ['completed', 'settlement', 'capture'])
+                ->sum('amount');
+
+            $remaining = max(0, (float) $booking->total_price - $paidTotal);
+            $booking->paid = $paidTotal;
+            $booking->remaining = $remaining;
+            $booking->status = $remaining <= 0 ? 'approved' : 'partial';
+            $booking->save();
+        }
+
+        return redirect()->route('booking.detail', $booking)
+            ->with('payment_success', 'Pembayaran berhasil diproses.');
     }
 }
 

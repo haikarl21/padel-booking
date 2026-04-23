@@ -137,11 +137,10 @@
 -->
 
 <!-- Load Midtrans Snap Library -->
-<script src="https://app.sandbox.midtrans.com/snap/snap.js"></script>
+<script
+    src="{{ config('midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+    data-client-key="{{ $clientKey }}"></script>
 <script>
-    // CLIENT KEY dari config Midtrans
-    var clientKey = '{{ $clientKey }}';
-    
     // SNAP TOKEN yang digenerate di backend
     var snapToken = '{{ $snapToken }}';
 
