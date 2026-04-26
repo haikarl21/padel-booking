@@ -75,3 +75,13 @@ Route::get('/admin/payments', [PaymentController::class, 'listPayments'])->middl
 // Validasi security dilakukan via signature key verification di controller
 Route::post('/midtrans/callback', [\App\Http\Controllers\MidtransCallbackController::class, 'handle'])->name('midtrans.callback');
 
+// ROUTE SEMENTARA UNTUK RESET DATABASE DI RAILWAY
+Route::get('/reset-database-sekarang', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true, '--seed' => true]);
+        return '<h1>BERHASIL!✅</h1><p>Database Railway Berhasil Direset. Jam sudah urut. Silakan kembali ke website Anda.</p>';
+    } catch (\Exception $e) {
+        return '<h1>GAGAL!❌</h1><p>Error: ' . $e->getMessage() . '</p>';
+    }
+});
+
