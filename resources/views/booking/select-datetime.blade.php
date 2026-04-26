@@ -76,7 +76,7 @@
                                     @endphp
                                     <div class="col-6">
                                         <div class="form-check p-3" style="background-color: #1a1a1a; border-radius: 10px; border: 1px solid #333333; cursor: {{ $isBooked ? 'not-allowed' : 'pointer' }};">
-                                            <input class="form-check-input time-slot" type="checkbox" name="time_slot_ids[]" id="slot{{ $slot->id }}" value="{{ \Carbon\Carbon::parse($slot->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($slot->end_time)->format('H:i') }}" data-id="{{ $slot->id }}" {{ $isBooked ? 'disabled' : '' }}>
+                                            <input class="form-check-input time-slot" type="checkbox" name="time_slot_ids[]" id="slot{{ $slot->id }}" value="{{ $slot->id }}" data-time="{{ \Carbon\Carbon::parse($slot->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($slot->end_time)->format('H:i') }}" {{ $isBooked ? 'disabled' : '' }}>
                                             <label class="form-check-label fw-semibold {{ $isBooked ? 'text-danger' : '' }}" for="slot{{ $slot->id }}" style="cursor: pointer;">
                                                 {{ $slot->display_text }}
                                                 @if($isBooked)
@@ -142,8 +142,8 @@
                             const confirmBtn = document.getElementById('confirmBtn');
                             const timeSlots = Array.from(document.querySelectorAll('.time-slot'));
 
-                            function getHour(slotValue) {
-                                return parseInt(slotValue.split('-')[0].split(':')[0], 10);
+                            function getHour(slot) {
+                                return parseInt(slot.dataset.time.split('-')[0].split(':')[0], 10);
                             }
 
                             function updateTotalPrice() {
@@ -163,7 +163,7 @@
                                     if (this.checked) {
                                         // Cari checkbox apa saja yang sedang tercentang
                                         const currentlyChecked = timeSlots.filter(s => s.checked);
-                                        const hoursChecked = currentlyChecked.map(s => getHour(s.value));
+                                        const hoursChecked = currentlyChecked.map(s => getHour(s));
                                         
                                         if (hoursChecked.length > 1) {
                                             const minHour = Math.min(...hoursChecked);
@@ -171,7 +171,7 @@
                                             
                                             // Cek apakah ada slot di antara min dan max yang disabled (sudah dibooking)
                                             const slotsInRange = timeSlots.filter(s => {
-                                                const h = getHour(s.value);
+                                                const h = getHour(s);
                                                 return h >= minHour && h <= maxHour;
                                             });
 
@@ -196,7 +196,7 @@
                                         // Atau untuk mudahnya, biarkan user uncheck dan sisanya dievaluasi jika terputus
                                         const stillChecked = timeSlots.filter(s => s.checked);
                                         if (stillChecked.length > 0) {
-                                            const hoursChecked = stillChecked.map(s => getHour(s.value));
+                                            const hoursChecked = stillChecked.map(s => getHour(s));
                                             const minHour = Math.min(...hoursChecked);
                                             const maxHour = Math.max(...hoursChecked);
                                             
@@ -208,9 +208,9 @@
                                                     text: 'Anda membatalkan slot di tengah. Rentang waktu akan disesuaikan.'
                                                 });
                                                 // Uncheck semua yang lebih besar dari yang di-uncheck
-                                                const uncheckHour = getHour(this.value);
+                                                const uncheckHour = getHour(this);
                                                 timeSlots.forEach(s => {
-                                                    if (s.checked && getHour(s.value) > uncheckHour) {
+                                                    if (s.checked && getHour(s) > uncheckHour) {
                                                         s.checked = false;
                                                     }
                                                 });
