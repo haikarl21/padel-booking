@@ -76,7 +76,7 @@
                                     @endphp
                                     <div class="col-6">
                                         <div class="form-check p-3" style="background-color: #1a1a1a; border-radius: 10px; border: 1px solid #333333; cursor: {{ $isBooked ? 'not-allowed' : 'pointer' }};">
-                                            <input class="form-check-input time-slot" type="checkbox" name="time_slot_ids[]" id="slot{{ $slot->id }}" value="{{ $slot->id }}" {{ $isBooked ? 'disabled' : '' }}>
+                                            <input class="form-check-input time-slot" type="checkbox" name="time_slot_ids[]" id="slot{{ $slot->id }}" value="{{ \Carbon\Carbon::parse($slot->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($slot->end_time)->format('H:i') }}" data-id="{{ $slot->id }}" {{ $isBooked ? 'disabled' : '' }}>
                                             <label class="form-check-label fw-semibold {{ $isBooked ? 'text-danger' : '' }}" for="slot{{ $slot->id }}" style="cursor: pointer;">
                                                 {{ $slot->display_text }}
                                                 @if($isBooked)
@@ -135,14 +135,19 @@
                             </button>
                         </form>
 
+                        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                         <script>
                             const pricePerHour = {{ $court->price_per_hour }};
                             const totalPriceEl = document.getElementById('totalPrice');
                             const confirmBtn = document.getElementById('confirmBtn');
-                            const timeSlots = document.querySelectorAll('.time-slot');
+                            const timeSlots = Array.from(document.querySelectorAll('.time-slot'));
+
+                            function getHour(slotValue) {
+                                return parseInt(slotValue.split('-')[0].split(':')[0], 10);
+                            }
 
                             function updateTotalPrice() {
-                                const checkedSlots = document.querySelectorAll('.time-slot:checked').length;
+                                const checkedSlots = timeSlots.filter(s => s.checked).length;
                                 if (checkedSlots > 0) {
                                     const total = pricePerHour * checkedSlots;
                                     totalPriceEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
@@ -154,7 +159,66 @@
                             }
 
                             timeSlots.forEach(slot => {
-                                slot.addEventListener('change', updateTotalPrice);
+                                slot.addEventListener('change', function(e) {
+                                    if (this.checked) {
+                                        // Cari checkbox apa saja yang sedang tercentang
+                                        const currentlyChecked = timeSlots.filter(s => s.checked);
+                                        const hoursChecked = currentlyChecked.map(s => getHour(s.value));
+                                        
+                                        if (hoursChecked.length > 1) {
+                                            const minHour = Math.min(...hoursChecked);
+                                            const maxHour = Math.max(...hoursChecked);
+                                            
+                                            // Cek apakah ada slot di antara min dan max yang disabled (sudah dibooking)
+                                            const slotsInRange = timeSlots.filter(s => {
+                                                const h = getHour(s.value);
+                                                return h >= minHour && h <= maxHour;
+                                            });
+
+                                            const hasDisabled = slotsInRange.some(s => s.disabled);
+
+                                            if (hasDisabled) {
+                                                Swal.fire({
+                                                    icon: 'error',
+                                                    title: 'Gagal',
+                                                    text: 'Tidak bisa memilih rentang ini karena ada jadwal yang sudah dipesan di antaranya.'
+                                                });
+                                                this.checked = false;
+                                            } else {
+                                                // Otomatis centang semua di antara min dan max
+                                                slotsInRange.forEach(s => {
+                                                    s.checked = true;
+                                                });
+                                            }
+                                        }
+                                    } else {
+                                        // Jika user uncheck, kita hapus centang dari posisi tersebut hingga ujung yang sesuai
+                                        // Atau untuk mudahnya, biarkan user uncheck dan sisanya dievaluasi jika terputus
+                                        const stillChecked = timeSlots.filter(s => s.checked);
+                                        if (stillChecked.length > 0) {
+                                            const hoursChecked = stillChecked.map(s => getHour(s.value));
+                                            const minHour = Math.min(...hoursChecked);
+                                            const maxHour = Math.max(...hoursChecked);
+                                            
+                                            // Pastikan tidak ada gap di sisa pilihan (jika uncheck di tengah)
+                                            if (maxHour - minHour + 1 !== stillChecked.length) {
+                                                Swal.fire({
+                                                    icon: 'error',
+                                                    title: 'Rentang Terputus',
+                                                    text: 'Anda membatalkan slot di tengah. Rentang waktu akan disesuaikan.'
+                                                });
+                                                // Uncheck semua yang lebih besar dari yang di-uncheck
+                                                const uncheckHour = getHour(this.value);
+                                                timeSlots.forEach(s => {
+                                                    if (s.checked && getHour(s.value) > uncheckHour) {
+                                                        s.checked = false;
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                    updateTotalPrice();
+                                });
                             });
 
                             // Initialize on page load

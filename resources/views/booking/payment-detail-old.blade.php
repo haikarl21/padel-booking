@@ -107,7 +107,7 @@
                         <h5 class="mb-0">📤 Upload Bukti Pembayaran Baru</h5>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('payment.upload-proof', $payment) }}" method="POST" enctype="multipart/form-data">
+                        <form action="#" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="mb-3">
                                 <label for="proof_file" class="form-label">Pilih Bukti Transfer (JPG/PNG, Max 5MB)</label>
@@ -205,7 +205,7 @@
                                 <strong>Perhatian:</strong> Pastikan Anda sudah transfer dengan nominal YANG BENAR (termasuk kode unik) sebelum klik tombol!
                             </p>
 
-                            <form action="{{ route('payment.confirm-transfer', $payment) }}" method="POST" id="confirmForm">
+                            <form action="#" method="POST" id="confirmForm">
                                 @csrf
                                 <button type="button" class="btn btn-success btn-lg w-100" 
                                         onclick="if(confirm('Pastikan Anda sudah transfer dengan nominal Rp {{ $displayData['total_unique'] }} ke: {{ $displayData['bank']['account_number'] }}\n\nAda cara untuk membatalkan jika salah. Lanjutkan?')) { document.getElementById(\"confirmForm\").submit(); }">
