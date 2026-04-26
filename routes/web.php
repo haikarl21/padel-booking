@@ -75,13 +75,20 @@ Route::get('/admin/payments', [PaymentController::class, 'listPayments'])->middl
 // Validasi security dilakukan via signature key verification di controller
 Route::post('/midtrans/callback', [\App\Http\Controllers\MidtransCallbackController::class, 'handle'])->name('midtrans.callback');
 
-// ROUTE SEMENTARA UNTUK RESET DATABASE DI RAILWAY
-Route::get('/reset-database-sekarang', function () {
+// ROUTE SEMENTARA UNTUK MEMPERBAIKI JAM DI DATA RAILWAY TANPA RESET DATABASE
+Route::get('/fix-jam-railway', function () {
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true, '--seed' => true]);
-        return '<h1>BERHASIL!✅</h1><p>Database Railway Berhasil Direset. Jam sudah urut. Silakan kembali ke website Anda.</p>';
+        for ($hour = 9; $hour < 23; $hour++) {
+            $startTime = sprintf('%02d:00', $hour);
+            $endTime = sprintf('%02d:00', $hour + 1);
+            \App\Models\TimeSlot::firstOrCreate(
+                ['start_time' => $startTime],
+                ['end_time' => $endTime, 'display_text' => "$startTime - $endTime"]
+            );
+        }
+        return '<h1 style="color:green; text-align:center; margin-top:50px;">BERHASIL! ✅</h1><p style="text-align:center;">Jam yang bolong-bolong di Railway sudah ditambahkan. Silakan buka fitur booking Anda lagi.</p>';
     } catch (\Exception $e) {
-        return '<h1>GAGAL!❌</h1><p>Error: ' . $e->getMessage() . '</p>';
+        return 'Error: ' . $e->getMessage();
     }
 });
 
