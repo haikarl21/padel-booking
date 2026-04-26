@@ -21,7 +21,15 @@ class TimeSlotSeeder extends Seeder
         }
 
         foreach ($slots as $slot) {
-            TimeSlot::create($slot);
+            TimeSlot::firstOrCreate(
+                [
+                    'start_time' => $slot['start_time'], 
+                    'end_time' => $slot['end_time']
+                ],
+                [
+                    'display_text' => $slot['display_text']
+                ]
+            );
         }
     }
 }

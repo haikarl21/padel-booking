@@ -22,7 +22,7 @@ class BookingController extends Controller
             'date' => 'required|date|after_or_equal:today',
         ]);
 
-        $timeSlots = TimeSlot::all();
+        $timeSlots = TimeSlot::orderBy('start_time')->get()->unique('start_time');
 
         // Collect ALL booked slots for this court and date
         $bookings = Booking::where('court_id', $court->id)
